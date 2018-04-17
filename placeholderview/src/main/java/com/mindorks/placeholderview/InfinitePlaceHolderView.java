@@ -6,14 +6,6 @@ import android.os.Looper;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
-import android.view.LayoutInflater;
-
-import com.mindorks.placeholderview.annotations.Resolve;
-import com.mindorks.placeholderview.annotations.infinite.LoadMore;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 /**
  * Created by janisharali on 05/10/16.
@@ -24,6 +16,7 @@ public class InfinitePlaceHolderView extends PlaceHolderView {
     private boolean mIsLoadingMore = false;
     private boolean mNoMoreToLoad = false;
     private Object mLoadMoreResolver;
+    private LoadMoreCallbackBinder mLoadMoreCallbackBinder;
     private PlaceHolderView.OnScrollListener mOnScrollListener;
 
     public InfinitePlaceHolderView(Context context) {
@@ -41,6 +34,7 @@ public class InfinitePlaceHolderView extends PlaceHolderView {
     private void setLoadMoreListener() {
         mOnScrollListener =
                 new PlaceHolderView.OnScrollListener() {
+                    @SuppressWarnings("unchecked")
                     @Override
                     public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                         super.onScrolled(recyclerView, dx, dy);
@@ -58,7 +52,7 @@ public class InfinitePlaceHolderView extends PlaceHolderView {
                                     @Override
                                     public void run() {
                                         addView(mLoadMoreResolver);
-                                        bindLoadMore(mLoadMoreResolver);
+                                        mLoadMoreCallbackBinder.bindLoadMore(mLoadMoreResolver);
                                     }
                                 });
                             }
@@ -69,7 +63,8 @@ public class InfinitePlaceHolderView extends PlaceHolderView {
     }
 
     public <T>void setLoadMoreResolver(T loadMoreResolver) {
-        this.mLoadMoreResolver = loadMoreResolver;
+        mLoadMoreResolver = loadMoreResolver;
+        mLoadMoreCallbackBinder = Binding.bindLoadMoreCallback(loadMoreResolver);
         mNoMoreToLoad = false;
         setLoadMoreListener();
     }
@@ -87,22 +82,6 @@ public class InfinitePlaceHolderView extends PlaceHolderView {
                 mIsLoadingMore = false;
             }
         });
-    }
-
-    private <T>void bindLoadMore(final T resolver){
-        for(final Method method : resolver.getClass().getDeclaredMethods()) {
-            LoadMore annotation = method.getAnnotation(LoadMore.class);
-            if(annotation != null) {
-                try {
-                    method.setAccessible(true);
-                    method.invoke(resolver);
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                } catch (InvocationTargetException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
     }
 
     public int getViewCount() {

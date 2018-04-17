@@ -2,10 +2,7 @@ package com.mindorks.placeholderview;
 
 import android.content.Context;
 import android.content.res.Resources;
-import android.support.v7.widget.RecyclerView;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,27 +12,18 @@ import java.util.List;
  */
 
 public class ExpandableViewAdapter<T> extends ViewAdapter<T>
-        implements ExpandableViewBinder.ExpansionCallback<T>{
+        implements ExpandableViewBinder.ExpansionCallback<T, View> {
 
     private ExpandableViewBinder<T, View> mParentBinder;
 
-    /**
-     *
-     * @param context
-     */
     public ExpandableViewAdapter(Context context) {
         super(context);
     }
 
-    /**
-     *
-     * @param viewResolver
-     * @throws IndexOutOfBoundsException
-     */
     @Override
     protected void addView(T viewResolver) throws IndexOutOfBoundsException {
-        ExpandableViewBinder<T, View> expandableViewBinder = new ExpandableViewBinder<>(viewResolver);
-        if(expandableViewBinder.bindViewType()){
+        ExpandableViewBinder<T, View> expandableViewBinder = Binding.bindExpandableViewResolver(viewResolver);
+        if (expandableViewBinder.isParent()) {
             expandableViewBinder.setCallback(this);
             mParentBinder = expandableViewBinder;
             getViewBinderList().add(mParentBinder);
@@ -55,16 +43,10 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
         }
     }
 
-    /**
-     *
-     * @param parentResolver
-     * @param childResolver
-     * @throws Resources.NotFoundException
-     */
     protected void addChildView(T parentResolver, T childResolver) throws Resources.NotFoundException {
         ExpandableViewBinder<T, View> parentBinder = getBinderForResolver(parentResolver);
         if(parentBinder != null && parentBinder.isParent()){
-            ExpandableViewBinder<T, View> childViewBinder = new ExpandableViewBinder<>(childResolver);
+            ExpandableViewBinder<T, View> childViewBinder = Binding.bindExpandableViewResolver(childResolver);
             parentBinder.getChildList().add(childViewBinder);
             if(parentBinder.isExpanded()){
                 int position;
@@ -78,17 +60,11 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
         }
     }
 
-    /**
-     *
-     * @param parentPosition
-     * @param childResolver
-     * @throws Resources.NotFoundException
-     */
     protected void addChildView(int parentPosition, T childResolver) throws Resources.NotFoundException {
         for(ViewBinder<T, View> viewBinder : getViewBinderList()){
             ExpandableViewBinder<T, View> parentBinder = (ExpandableViewBinder<T, View>)viewBinder;
             if(parentBinder.isParent() && parentBinder.getParentPosition() == parentPosition){
-                ExpandableViewBinder<T, View> childViewBinder = new ExpandableViewBinder<>(childResolver);
+                ExpandableViewBinder<T, View> childViewBinder = Binding.bindExpandableViewResolver(childResolver);
                 parentBinder.getChildList().add(childViewBinder);
                 if(parentBinder.isExpanded()){
                     int position;
@@ -104,30 +80,12 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
         }
     }
 
-    /**
-     *
-     * @param position
-     * @param viewResolver
-     * @throws IndexOutOfBoundsException
-     */
     @Override
     protected void addView(int position, T viewResolver) throws IndexOutOfBoundsException {}
 
-    /**
-     *
-     * @param resolverOld
-     * @param resolverNew
-     * @param after
-     * @throws Resources.NotFoundException
-     */
     @Override
     protected void addView(T resolverOld, T resolverNew, boolean after) throws Resources.NotFoundException {}
 
-    /**
-     *
-     * @param viewResolver
-     * @throws IndexOutOfBoundsException
-     */
     @Override
     protected void removeView(T viewResolver) throws IndexOutOfBoundsException {
         ExpandableViewBinder<T, View> expandableViewBinder = getBinderForResolver(viewResolver);
@@ -141,11 +99,6 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
         super.removeView(viewResolver);
     }
 
-    /**
-     *
-     * @param position
-     * @throws IndexOutOfBoundsException
-     */
     @Override
     protected void removeView(int position) throws IndexOutOfBoundsException {
         ExpandableViewBinder<T, View> expandableViewBinder = (ExpandableViewBinder<T, View>)getViewBinderList().get(position);
@@ -159,25 +112,18 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
         super.removeView(position);
     }
 
-    /**
-     *
-     * @param parentBinder
-     */
     @Override
     public void onExpand(ExpandableViewBinder<T, View> parentBinder) {
         int position = getViewBinderList().indexOf(parentBinder) + 1;
         for(ExpandableViewBinder<T, View> viewBinder : parentBinder.getChildList()) {
             getViewBinderList().add(position, viewBinder);
             notifyItemInserted(position);
+            position++;
         }
         if(parentBinder.isSingleTop())
             collapseOthers(parentBinder);
     }
 
-    /**
-     *
-     * @param parentBinder
-     */
     @Override
     public void onCollapse(ExpandableViewBinder<T, View> parentBinder) {
         for(ExpandableViewBinder<T, View> viewBinder : parentBinder.getChildList()){
@@ -185,10 +131,6 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
         }
     }
 
-    /**
-     *
-     * @param parentBinder
-     */
     private void collapseOthers(ExpandableViewBinder<T, View> parentBinder){
         List<ExpandableViewBinder<T,View>> expandableViewBinderList = new ArrayList<>();
         for (ViewBinder viewBinder : getViewBinderList()){
@@ -202,11 +144,6 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
         }
     }
 
-    /**
-     *
-     * @param parentViewBinder
-     * @return
-     */
     private int getParentPosition(ExpandableViewBinder<T, View> parentViewBinder){
         int position = -1;
         for (ViewBinder viewBinder : getViewBinderList()) {
@@ -221,20 +158,10 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
         return position;
     }
 
-    /**
-     *
-     * @param parentViewBinder
-     * @param childViewBinder
-     * @return
-     */
     private int getChildPosition(ExpandableViewBinder<T, View> parentViewBinder, ExpandableViewBinder<T, View> childViewBinder){
         return parentViewBinder.getChildList().indexOf(childViewBinder);
     }
 
-    /**
-     *
-     * @return
-     */
     private ExpandableViewBinder<T, View> getLastParentBinder() {
         for (int i = getViewBinderList().size() - 1; i >= 0; i--){
             ExpandableViewBinder<T, View> expandableViewBinder = (ExpandableViewBinder<T, View>) getViewBinderList().get(i);
@@ -245,11 +172,6 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
         return null;
     }
 
-    /**
-     *
-     * @param viewResolver
-     * @return
-     */
     protected ExpandableViewBinder<T, View> getBinderForResolver(T viewResolver){
         for(ViewBinder<T, View> viewBinder : getViewBinderList()){
             ExpandableViewBinder<T, View> expandableViewBinder = (ExpandableViewBinder<T, View>)viewBinder;
@@ -258,5 +180,24 @@ public class ExpandableViewAdapter<T> extends ViewAdapter<T>
             }
         }
         return null;
+    }
+
+    protected ExpandableViewBinder<T, View> getParentBinderAtPosition(int position) {
+
+        ExpandableViewBinder<T, View> parentBinder = null;
+
+        for (ViewBinder<T, View> viewBinder : getViewBinderList()) {
+
+            ExpandableViewBinder<T, View> expandableViewBinder =
+                    (ExpandableViewBinder<T, View>) viewBinder;
+
+            if (position >= 0
+                    && expandableViewBinder.isParent()
+                    && expandableViewBinder.getParentPosition() == position) {
+                parentBinder = expandableViewBinder;
+                break;
+            }
+        }
+        return parentBinder;
     }
 }
